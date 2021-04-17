@@ -29,6 +29,13 @@ module.exports = {
           },
         },
       },
+      manifestTransformer: (manifest) => {
+        console.log(process.env.BROWSER);
+        if (process.env.BROWSER === "firefox") {
+          delete manifest["key"];
+        }
+        return manifest;
+      },
     },
   },
 };

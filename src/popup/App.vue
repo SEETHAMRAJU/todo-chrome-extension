@@ -1,5 +1,8 @@
 <template>
+<div>
   <hello-world />
+  <h1 >Haha</h1>
+</div>
 </template>
 
 <script lang="ts">
