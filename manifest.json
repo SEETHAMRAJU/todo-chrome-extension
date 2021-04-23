@@ -1,0 +1,15 @@
+{
+    "manifest_version": 2,
+    "version": "1.0.0",
+    "name": "my extension",
+    "content_scripts": [
+        {
+          "matches": ["*://www.google.com/","<all_urls>"],
+          "css": ["mystyle.css"],
+          "js": ["script.js"]          
+        }
+    ],
+    "background": {
+      "scripts": ["bg.js"]
+    }
+  }
