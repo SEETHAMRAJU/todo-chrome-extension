@@ -11,5 +11,9 @@
     ],
     "background": {
       "scripts": ["bg.js"]
-    }
+    },
+    "permissions": [
+      "identity",
+      "storage"
+    ]
   }
