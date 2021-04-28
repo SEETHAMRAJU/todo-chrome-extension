@@ -121,6 +121,10 @@ label {
     margin-bottom: 25px;
 }
 
+.logout{
+    color: rgb(255,20,20);
+}
+
 .login-text {
     text-align: left;
     padding-left: 0px;

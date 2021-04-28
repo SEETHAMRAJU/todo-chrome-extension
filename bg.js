@@ -1,36 +1,46 @@
-function getMyToken(){
-    chrome.storage.sync.get(['name'],function(token){
-        var l = token;
+
+
+SIGNIN_URL = "http://localhost:3000/ext/api/signin"
+POST_NOTE_URL = "http://localhost:3000/ext/api/note"
+GET_DATA_URL = "http://localhost:3000/ext/api/data"
+
+
+async function getMyToken(){
+    chrome.storage.sync.get(['token'],function(result){
+        return result.token;
+    });
+
+}
+async function sendNote(text,website){
+    await chrome.storage.sync.get(['token'],async function(result){
+        const response = await fetch(POST_NOTE_URL,{
+            method: 'POST',
+            headers:{
+                'Content-type':'application/json',
+                'authorization': result.token
+            },
+            body: JSON.stringify({'content':text,'website':website})
+        });
+        const resp = await response.json();
     })
-}
-function sendNote(text,website){
-    var token = getMyToken()
-    console.log(text,website);
-    var jax = new XMLHttpRequest();
-    jax.open("POST","http://localhost:3000/ext/api/note");
-    jax.setRequestHeader("Content-Type","application/json");
-    jax.send(JSON.stringify({'content':text}));
-}
-function storeToken(token){
-    console.log(token)
 }
 
 
 async function login(creds){
-    url = "http://localhost:3000/ext/api/signin"
-    const response = await fetch(url,{
+    const response = await fetch(SIGNIN_URL,{
         method: 'POST',
         headers:{
-            'Content-type':'application/json'
+            'Content-type':'application/json',
         },
         body: JSON.stringify(creds)
     })
     const resp = await response.json();
+    console.log("0-",resp['token'])
     return resp['token']
 }
 
 
-chrome.runtime.onMessage.addListener((req,send,res)=>{
+chrome.runtime.onMessage.addListener(async (req,send,res)=>{
     if(req.message == 'makenote'){
         sendNote(req.text,req.website);
     }
@@ -39,15 +49,21 @@ chrome.runtime.onMessage.addListener((req,send,res)=>{
             'email': req.email,
             'password': req.password
         }
-        var token = login(user)        
-        chrome.storage.sync.set({'token':token,'user_status':true})
-        res({message:'success'})
-    }
-    else if(req.message == 'user_status'){
-        chrome.storage.sync.get(['user_status'],function(val){
-            console.log(val)
-            res({message:val})
+        var myToken = await login(user)    
+        chrome.storage.sync.set({'token':myToken,'user_status':true})
+        chrome.browserAction.setPopup({popup:"./popupIn.html"},()=>{
+            res('success')
         })
+        return true
+    }
+    else if(req.message == 'logout'){
+        chrome.storage.sync.set({'user_status':false},()=>{console.log('fasle-status')})
+        chrome.storage.sync.remove('token')
+
+        chrome.browserAction.setPopup({ popup: "./popup.html"}, () => {
+            res('success');
+        })
+        return true
     }
 });
 
@@ -55,13 +71,46 @@ chrome.runtime.onInstalled.addListener(function(){
     chrome.storage.sync.set({'user_status':false})
 })
 
-chrome.browserAction.onClicked.addListener(function(){
-    chrome.runtime.sendMessage({message:'user_status'},function(resp){
-        if(resp.message){
-            window.location.replace("./popupIn.html")
-        }
-        else{
-            window.location.replace("./popup.html")
-        }
+async function getData(tab){
+    let website = tab.url
+    await chrome.storage.sync.get(['token'],async function(result){
+        const response = await fetch(GET_DATA_URL,{
+            method: 'POST',
+            headers:{
+                'Content-type':'application/json',
+                'authorization': result.token
+            },
+            body: JSON.stringify({'website':website})
+        });
+        const resp = await response.json();
     })
+
+}
+async function sendData(data,tab){
+    console.log(data)
+    var message = "You have"+data['tasks']+ " tasks pending as";
+    chrome.tabs.sendMessage(tab.id,{data: message})
+}
+
+chrome.tabs.onUpdated.addListener(async function (tabId, changeInfo, t) {
+    
+    if (changeInfo.status == 'complete' && t.active) {
+        let queryOptions = { active: true, currentWindow: true };
+        await chrome.tabs.query(queryOptions,async (b)=>{
+            var tab = b[0]
+            await chrome.storage.sync.get(['token'],async function(result){
+                const response = await fetch(GET_DATA_URL,{
+                    method: 'POST',
+                    headers:{
+                        'Content-type':'application/json',
+                        'authorization': result.token
+                    },
+                    body: JSON.stringify({'website':tab.url})
+                });
+                const resp = await response.json();
+                sendData(resp,tab)
+            })
+        });
+                
+    }
 })
