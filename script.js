@@ -5,7 +5,6 @@
         console.log(document.URL);
         chrome.runtime.sendMessage({message:'makenote',text: txt,website: document.URL})
         // return;
-
     }
            
     function init(){

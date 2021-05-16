@@ -5,6 +5,8 @@ POST_NOTE_URL = "http://localhost:3000/ext/api/note"
 GET_DATA_URL = "http://localhost:3000/ext/api/data"
 
 
+
+
 async function getMyToken(){
     chrome.storage.sync.get(['token'],function(result){
         return result.token;
@@ -49,7 +51,7 @@ chrome.runtime.onMessage.addListener(async (req,send,res)=>{
             'email': req.email,
             'password': req.password
         }
-        var myToken = await login(user)    
+        var myToken = await login(user)
         chrome.storage.sync.set({'token':myToken,'user_status':true})
         chrome.browserAction.setPopup({popup:"./popupIn.html"},()=>{
             res('success')
@@ -89,11 +91,12 @@ async function getData(tab){
 async function sendData(data,tab){
     console.log(data)
     var message = "You have"+data['tasks']+ " tasks pending as";
-    chrome.tabs.sendMessage(tab.id,{data: message})
+    if(data['tasks']>0){
+      chrome.tabs.sendMessage(tab.id,{data: message, show:true})
+    }
 }
 
 chrome.tabs.onUpdated.addListener(async function (tabId, changeInfo, t) {
-    
     if (changeInfo.status == 'complete' && t.active) {
         let queryOptions = { active: true, currentWindow: true };
         await chrome.tabs.query(queryOptions,async (b)=>{
@@ -111,6 +114,6 @@ chrome.tabs.onUpdated.addListener(async function (tabId, changeInfo, t) {
                 sendData(resp,tab)
             })
         });
-                
+
     }
 })
